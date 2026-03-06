@@ -55,9 +55,37 @@ GameManager.prototype.addStartTiles = function () {
 // Adds a tile in a random position
 GameManager.prototype.addRandomTile = function () {
   if (this.grid.cellsAvailable()) {
-    var value = this.tileTypes[Math.floor(Math.random() * this.tileTypes.length)];
-    var tile = new Tile(this.grid.randomAvailableCell(), value);
+    // Weight each seed by how many tiles on the board it divides
+    var weights = [];
+    var totalWeight = 0;
+    var self = this;
+    for (var i = 0; i < this.tileTypes.length; i++) {
+      var seed = this.tileTypes[i];
+      var count = 0;
+      this.grid.eachCell(function (x, y, tile) {
+        if (tile && tile.value % seed === 0) count++;
+      });
+      weights.push(count);
+      totalWeight += count;
+    }
 
+    var value;
+    if (totalWeight === 0) {
+      // No tiles on board yet — pick uniformly
+      value = this.tileTypes[Math.floor(Math.random() * this.tileTypes.length)];
+    } else {
+      var r = Math.random() * totalWeight;
+      var cumulative = 0;
+      for (var i = 0; i < weights.length; i++) {
+        cumulative += weights[i];
+        if (r < cumulative) {
+          value = this.tileTypes[i];
+          break;
+        }
+      }
+    }
+
+    var tile = new Tile(this.grid.randomAvailableCell(), value);
     this.grid.insertTile(tile);
   }
 };
